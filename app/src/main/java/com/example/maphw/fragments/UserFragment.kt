@@ -16,6 +16,8 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.example.maphw.MapApplication
+import com.example.maphw.OwnerViewModelFactory
 import com.example.maphw.activities.MapActivity
 import com.example.maphw.R
 import com.example.maphw.adapters.UsersAdapter
