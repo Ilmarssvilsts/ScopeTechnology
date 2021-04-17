@@ -12,20 +12,26 @@ import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.ViewModelProviders
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.liveData
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-import com.example.maphw.MapApplication
-import com.example.maphw.OwnerViewModelFactory
+import com.example.maphw.*
 import com.example.maphw.activities.MapActivity
-import com.example.maphw.R
 import com.example.maphw.adapters.UsersAdapter
 import com.example.maphw.api.API
 import com.example.maphw.api.models.User
 import com.example.maphw.api.models.UserList
+import com.example.maphw.data.Owner
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
+import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -39,6 +45,8 @@ class UserFragment : Fragment(), UsersAdapter.OnItemClickListener {
     private var noData: TextView? = null
     private var progress: ProgressBar? = null
     private var swipeRefreshLayout: SwipeRefreshLayout? = null
+
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -70,7 +78,7 @@ class UserFragment : Fragment(), UsersAdapter.OnItemClickListener {
             noData?.visibility = View.VISIBLE
         }
         swipeRefreshLayout?.setRefreshing(false)
-        Toast.makeText(context, getString(R.string.error), Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, t.message, Toast.LENGTH_LONG).show()
     }
 
     private fun onResponse(response: UserList) {
@@ -83,6 +91,13 @@ class UserFragment : Fragment(), UsersAdapter.OnItemClickListener {
         //todo when database is added, this should be checked and list updated every day
         PreferenceManager.getDefaultSharedPreferences(context).edit()
             .putLong("LastUpdateDate", getTimeInMilli()).apply()
+
+            val word = Owner(1, "434", "434", "434")
+            var ss: MainActivity = activity as MainActivity
+            ss.userViewModel.insert(word)
+
+
+
     }
 
     //List needs to be cleaned, because API returns last item as empty

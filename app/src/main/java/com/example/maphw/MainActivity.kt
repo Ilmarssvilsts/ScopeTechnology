@@ -1,24 +1,28 @@
 package com.example.maphw
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.example.maphw.data.Owner
 import com.example.maphw.fragments.UserFragment
+import java.util.*
+import kotlin.concurrent.schedule
 
 
 class MainActivity : AppCompatActivity() {
 
-    private val userViewModel: UserViewModel by viewModels {
-        OwnerViewModelFactory((application as MapApplication).repository)
+    public val userViewModel: UserViewModel by viewModels {
+        OwnerViewModelFactory((application.getApplicationContext() as MapApplication).repository)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-       // showInitialFragment(savedInstanceState)
-       // val word = Owner("hghg")
-       // userViewModel.insert(word)
+        showInitialFragment(savedInstanceState)
+
     }
 
     private fun showInitialFragment(savedInstanceState: Bundle?) {
@@ -32,4 +36,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+    /*val word = Owner(1,"434","434","434")
+    userViewModel.insert(word)*/
 }
