@@ -1,16 +1,17 @@
 package com.example.maphw.data
 
-import androidx.room.Dao
-import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.Query
+import androidx.room.*
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface VehicleDao {
     @Query("SELECT * FROM vehicles")
-    fun getVehicles(): List<Vehicle>
+    fun getVehicles(): Flow<List<Vehicle>>
 
-    @Insert
+    @Query("SELECT * FROM vehicles WHERE user_id IS :id")
+    fun getVehicleById(id: Int): Flow<List<Vehicle>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertVehicles(vehicles: Vehicle): Long
 
     @Delete

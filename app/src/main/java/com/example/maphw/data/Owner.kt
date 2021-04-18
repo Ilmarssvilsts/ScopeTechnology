@@ -7,5 +7,5 @@ data class Owner(
     @PrimaryKey @ColumnInfo(name = "id") var userId: Int,
     var name: String,
     var surname: String,
-    var foto: String
+    var photo: String
 )

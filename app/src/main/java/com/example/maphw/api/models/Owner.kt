@@ -8,5 +8,5 @@ class Owner {
     @SerializedName("surname")
     var surname: String? = null
     @SerializedName("foto")
-    var foto: String? = null
+    var photo: String? = null
 }

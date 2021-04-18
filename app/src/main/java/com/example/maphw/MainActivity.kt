@@ -22,6 +22,7 @@ import com.example.maphw.api.API
 import com.example.maphw.api.models.User
 import com.example.maphw.api.models.UserList
 import com.example.maphw.data.Owner
+import com.example.maphw.data.Vehicle
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
 import java.time.LocalDateTime
@@ -40,8 +41,12 @@ class MainActivity : AppCompatActivity(), UsersAdapter.OnItemClickListener {
     private var swipeRefreshLayout: SwipeRefreshLayout? = null
 
     private val userViewModel: UserViewModel by viewModels {
-        OwnerViewModelFactory((application.getApplicationContext() as MapApplication).repository)
+        OwnerViewModelFactory((application.getApplicationContext() as MapApplication).ownerRepository)
     }
+    private val vehicleViewModel: VehicleViewModel by viewModels {
+        VehicleViewModelFactory((application.getApplicationContext() as MapApplication).vehicleRepository)
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,7 +73,6 @@ class MainActivity : AppCompatActivity(), UsersAdapter.OnItemClickListener {
         swipeRefreshLayout?.setOnRefreshListener {
             getData()
         }
-
 
     }
 
@@ -129,7 +133,15 @@ class MainActivity : AppCompatActivity(), UsersAdapter.OnItemClickListener {
                 this.usersList.removeAt(i)
             }
             else{
-                ownersList.add(Owner(this.usersList[i].userid!!, this.usersList[i].owner?.name!!, this.usersList[i].owner?.surname!!, this.usersList[i].owner?.foto!!))
+                ownersList.add(Owner(this.usersList[i].userid!!, this.usersList[i].owner?.name!!, this.usersList[i].owner?.surname!!, this.usersList[i].owner?.photo!!))
+
+                var vehicleList = this.usersList[i].vehicles
+                if(vehicleList != null){
+                    for (j in vehicleList){
+                        var vehicle = Vehicle(this.usersList[i].userid!!, j.vehicleId!!, j?.make!!, j?.model!!, j.year!!, j?.color!!, j?.vin!!, j?.photo!!)
+                        vehicleViewModel.insert(vehicle)
+                    }
+                }
             }
         }
     }

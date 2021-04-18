@@ -16,5 +16,5 @@ class Vehicle {
     @SerializedName("vin")
     var vin: String? = null
     @SerializedName("foto")
-    var foto: String? = null
+    var photo: String? = null
 }

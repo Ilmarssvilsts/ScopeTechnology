@@ -61,7 +61,7 @@ class UsersAdapter(
         holder.userName.text = usersList[position].name
         holder.userSurname.text = usersList[position].surname
         //Picasso sometimes does not like http urls
-        Picasso.get().load(usersList[position].foto?.replace("http:", "https:"))
+        Picasso.get().load(usersList[position].photo?.replace("http:", "https:"))
             .into(holder.userImg)
     }
 
