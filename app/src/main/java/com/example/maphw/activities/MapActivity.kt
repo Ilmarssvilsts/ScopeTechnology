@@ -3,19 +3,27 @@ package com.example.maphw.activities
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Address
+import android.location.Geocoder
 import android.location.Location
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.observe
+import com.example.maphw.*
 import com.example.maphw.BuildConfig.MAPS_API_KEY
 import com.example.maphw.R
+import com.example.maphw.adapters.UsersAdapter
 import com.example.maphw.api.API
 import com.example.maphw.api.models.*
+import com.example.maphw.data.Vehicle
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.*
@@ -24,6 +32,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
+import java.util.*
 
 
 class MapActivity : AppCompatActivity(), OnMapReadyCallback,
@@ -34,11 +43,17 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
     private var locationPermissionGranted = false
     private var lastKnownLocation: Location? = null
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
+    var id: Int = 0
+    private var vehicles: MutableList<Vehicle> = mutableListOf()
+
+    private val vehicleViewModel: VehicleViewModel by viewModels {
+        VehicleViewModelFactory((application.getApplicationContext() as MapApplication).vehicleRepository)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_maps)
-
+        id = intent.getIntExtra("id", 0)
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
 
         val mapFragment = supportFragmentManager
@@ -47,6 +62,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
 
         if (isNetworkConnected()) {
             getData()
+            vehicleViewModel.allVehicles.observe(owner = this) { words ->
+                // Update the cached copy of the words in the adapter.
+                words.let {
+                    vehicles = it as MutableList<Vehicle>
+                    map.setInfoWindowAdapter(InfoWindow(this, vehicles))
+                }
+            }
         } else {
             finish()
             Toast.makeText(baseContext, getString(R.string.no_network), Toast.LENGTH_LONG).show()
@@ -55,7 +77,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
 
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
-
         getLocationPermission()
         updateLocationUI()
         getDeviceLocation()
@@ -71,19 +92,26 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
     private fun onResponse(response: VehicleLocationList) {
         vehicleList = response.data as MutableList<VehicleLocation>
 
-        for (item in vehicleList) {
+        val geocoder: Geocoder
+        var addresses: List<Address>
+        geocoder = Geocoder(this, Locale.getDefault())
+
+
+                for (item in vehicleList) {
             var lat = item.lat?.toDoubleOrNull()
             var lon = item.lon?.toDoubleOrNull()
             if (lat != null && lon != null) {
+                addresses = geocoder.getFromLocation(lat, lon,1)
                 map.apply {
 
-                    val sydney = LatLng(lat, lon)
+                    val location = LatLng(lat, lon)
                     addMarker(
                         MarkerOptions()
-                            .position(sydney)
+                            .position(location)
                             .title(item.vehicleId.toString())
+                                .snippet(addresses.get(0).getAddressLine(0))
                             .icon(BitmapDescriptorFactory.fromResource(R.drawable.small_vehicle_icon))
-                    )
+                    ).tag = item.vehicleId
                 }
             }
         }
@@ -103,8 +131,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
     }
 
     private fun getData() {
-        val id: String = intent.getStringExtra("id").toString()
-        API.buildApi().getCurrentPosition(id)
+        API.buildApi().getCurrentPosition(id.toString())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribeOn(Schedulers.io())
             .subscribe({ response -> onResponse(response) }, { t -> onFailure(t) })

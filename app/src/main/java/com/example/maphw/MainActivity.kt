@@ -115,7 +115,7 @@ class MainActivity : AppCompatActivity(), UsersAdapter.OnItemClickListener {
     override fun onItemClicked(position: Int) {
         val intent = Intent(applicationContext, MapActivity::class.java)
 
-        intent.putExtra("id", usersList[position].userid.toString())
+        intent.putExtra("id", ownersList[position].userId)
         startActivity(intent)
     }
 
