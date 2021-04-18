@@ -31,6 +31,7 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.*
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
@@ -48,6 +49,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
     var id: Int = 0
     private var vehicles: MutableList<Vehicle> = mutableListOf()
     lateinit var mainHandler: Handler
+    var markers: MutableList<Marker> = ArrayList()
 
     private val vehicleViewModel: VehicleViewModel by viewModels {
         VehicleViewModelFactory((application.getApplicationContext() as MapApplication).vehicleRepository)
@@ -101,21 +103,33 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
         geocoder = Geocoder(this, Locale.getDefault())
 
 
-                for (item in vehicleList) {
+        for (item in vehicleList) {
             var lat = item.lat?.toDoubleOrNull()
             var lon = item.lon?.toDoubleOrNull()
             if (lat != null && lon != null) {
                 addresses = geocoder.getFromLocation(lat, lon,1)
-                map.apply {
+                val location = LatLng(lat, lon)
 
-                    val location = LatLng(lat, lon)
-                    addMarker(
-                        MarkerOptions()
+                var skip = false
+                for (marker in markers) {
+                    if (marker.tag == item.vehicleId) {
+                        marker.position = location
+                        skip = true
+                    }
+                }
+
+                if(!skip) {
+
+                    var friendMarker: Marker = map.addMarker(MarkerOptions()
                             .position(location)
                             .title(item.vehicleId.toString())
-                                .snippet(addresses.get(0).getAddressLine(0))
-                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.small_vehicle_icon))
-                    ).tag = item.vehicleId
+                            .snippet(addresses.get(0).getAddressLine(0))
+                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.small_vehicle_icon)
+                            ))
+                    friendMarker.tag = item.vehicleId
+
+                    markers.add(friendMarker)
+
                 }
             }
         }
