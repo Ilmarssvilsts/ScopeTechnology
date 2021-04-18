@@ -9,6 +9,9 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.View
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -34,6 +37,8 @@ import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 
@@ -46,9 +51,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
     private var locationPermissionGranted = false
     private var lastKnownLocation: Location? = null
     private var vehicles: MutableList<Vehicle> = mutableListOf()
+    private var updateTime: TextView? = null
+    private var updateView: LinearLayout? = null
     var markers: MutableList<Marker> = ArrayList()
     var vehicleList: MutableList<VehicleLocation> = mutableListOf()
     var id: Int = 0
+
 
     private val vehicleViewModel: VehicleViewModel by viewModels {
         VehicleViewModelFactory((applicationContext as MapApplication).vehicleRepository)
@@ -59,6 +67,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
         setContentView(R.layout.activity_maps)
         id = intent.getIntExtra("id", 0)
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
+        updateTime = findViewById(R.id.updateDate)
+        updateView = findViewById(R.id.update)
 
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
@@ -86,7 +96,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
     }
 
     private fun onFailure(t: Throwable) {
-        Toast.makeText(baseContext, getString(R.string.error), Toast.LENGTH_SHORT).show()
+        if (updateView?.visibility == View.GONE) {
+            Toast.makeText(baseContext, getString(R.string.error), Toast.LENGTH_SHORT).show()
+        }
         if (isNetworkConnected(baseContext)) {
             mainHandler.removeCallbacks(updateAPI)
             mainHandler.post(updateAPI)
@@ -95,9 +107,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
 
     private fun onResponse(response: VehicleLocationList) {
         vehicleList = response.data as MutableList<VehicleLocation>
-
         var addresses: List<Address>
         val geocoder = Geocoder(this, Locale.getDefault())
+
+        updateTime?.text = getTime()
+        updateView?.visibility = View.VISIBLE
 
         for (item in vehicleList) {
             var lat = item.lat?.toDoubleOrNull()
@@ -249,6 +263,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
         } catch (e: SecurityException) {
             Log.e("Exception: %s", e.message, e)
         }
+    }
+
+    private fun getTime(): String {
+        val current = LocalDateTime.now()
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        return " " + current.format(formatter)
     }
 
     companion object {
