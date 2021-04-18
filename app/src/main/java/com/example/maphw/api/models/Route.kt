@@ -6,11 +6,13 @@ class Route {
     @SerializedName("routes")
     var vehicles: List<Direction>? = null
 }
+
 class Direction {
     @SerializedName("overview_polyline")
     var vehicles: OverviewPolyLine? = null
 }
-class OverviewPolyLine  {
+
+class OverviewPolyLine {
     @SerializedName("points")
     var vehicles: String? = null
 }

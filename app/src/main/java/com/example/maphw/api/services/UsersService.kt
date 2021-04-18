@@ -16,5 +16,9 @@ interface UsersService {
     fun getCurrentPosition(@Query("userid") identifier: String?): Observable<VehicleLocationList>
 
     @GET("/maps/api/directions/json?origin={longLat}&sensor=false")
-    fun getRoute(@Query("destination") longLatDestination: String?, @Query("key") apiKey: String?, @Path("longLat") longLatStart: String?): Observable<Route>
+    fun getRoute(
+        @Query("destination") longLatDestination: String?,
+        @Query("key") apiKey: String?,
+        @Path("longLat") longLatStart: String?
+    ): Observable<Route>
 }

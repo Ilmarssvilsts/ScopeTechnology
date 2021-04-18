@@ -8,15 +8,14 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.maphw.R
-import com.example.maphw.api.models.User
-import com.example.maphw.data.Owner
+import com.example.maphw.data.models.Owner
 import com.squareup.picasso.Picasso
 
 class UsersAdapter(
-        private var usersList: MutableList<Owner>,
-        private val rowLayout: Int = 0,
-        private var context: Context?,
-        private val itemClickListener: OnItemClickListener
+    private var usersList: MutableList<Owner>,
+    private val rowLayout: Int = 0,
+    private var context: Context?,
+    private val itemClickListener: OnItemClickListener
 ) : RecyclerView.Adapter<UsersAdapter.UsersViewHolder>() {
 
     lateinit var recyclerView: RecyclerView

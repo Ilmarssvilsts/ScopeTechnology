@@ -1,4 +1,4 @@
-package com.example.maphw.data
+package com.example.maphw.data.models
 
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow

@@ -1,18 +1,14 @@
 package com.example.maphw.activities
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Geocoder
 import android.location.Location
-import android.net.ConnectivityManager
-import android.net.NetworkInfo
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -22,10 +18,13 @@ import androidx.lifecycle.observe
 import com.example.maphw.*
 import com.example.maphw.BuildConfig.MAPS_API_KEY
 import com.example.maphw.R
-import com.example.maphw.adapters.UsersAdapter
+import com.example.maphw.adapters.InfoWindow
 import com.example.maphw.api.API
 import com.example.maphw.api.models.*
-import com.example.maphw.data.Vehicle
+import com.example.maphw.data.models.Vehicle
+import com.example.maphw.data.viewModels.VehicleViewModel
+import com.example.maphw.data.viewModels.VehicleViewModelFactory
+import com.example.maphw.utils.Utils.isNetworkConnected
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.*
@@ -41,18 +40,18 @@ import java.util.*
 class MapActivity : AppCompatActivity(), OnMapReadyCallback,
     ActivityCompat.OnRequestPermissionsResultCallback {
 
-    var vehicleList: MutableList<VehicleLocation> = mutableListOf()
     private lateinit var map: GoogleMap
+    private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
+    lateinit var mainHandler: Handler
     private var locationPermissionGranted = false
     private var lastKnownLocation: Location? = null
-    private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
-    var id: Int = 0
     private var vehicles: MutableList<Vehicle> = mutableListOf()
-    lateinit var mainHandler: Handler
     var markers: MutableList<Marker> = ArrayList()
+    var vehicleList: MutableList<VehicleLocation> = mutableListOf()
+    var id: Int = 0
 
     private val vehicleViewModel: VehicleViewModel by viewModels {
-        VehicleViewModelFactory((application.getApplicationContext() as MapApplication).vehicleRepository)
+        VehicleViewModelFactory((applicationContext as MapApplication).vehicleRepository)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,11 +64,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
-        if (isNetworkConnected()) {
+        if (isNetworkConnected(baseContext)) {
             mainHandler = Handler(Looper.getMainLooper())
-            vehicleViewModel.allVehicles.observe(owner = this) { words ->
-                // Update the cached copy of the words in the adapter.
-                words.let {
+            vehicleViewModel.allVehicles.observe(owner = this) { item ->
+                item.let {
                     vehicles = it as MutableList<Vehicle>
                     map.setInfoWindowAdapter(InfoWindow(this, vehicles))
                 }
@@ -89,7 +87,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
 
     private fun onFailure(t: Throwable) {
         Toast.makeText(baseContext, getString(R.string.error), Toast.LENGTH_SHORT).show()
-        if (isNetworkConnected()) {
+        if (isNetworkConnected(baseContext)) {
             mainHandler.removeCallbacks(updateAPI)
             mainHandler.post(updateAPI)
         }
@@ -98,18 +96,17 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
     private fun onResponse(response: VehicleLocationList) {
         vehicleList = response.data as MutableList<VehicleLocation>
 
-        val geocoder: Geocoder
         var addresses: List<Address>
-        geocoder = Geocoder(this, Locale.getDefault())
-
+        val geocoder = Geocoder(this, Locale.getDefault())
 
         for (item in vehicleList) {
             var lat = item.lat?.toDoubleOrNull()
             var lon = item.lon?.toDoubleOrNull()
             if (lat != null && lon != null) {
-                addresses = geocoder.getFromLocation(lat, lon,1)
+                addresses = geocoder.getFromLocation(lat, lon, 1)
                 val location = LatLng(lat, lon)
 
+                //This updates annotations with new locations
                 var skip = false
                 for (marker in markers) {
                     if (marker.tag == item.vehicleId) {
@@ -118,23 +115,26 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
                     }
                 }
 
-                if(!skip) {
-
-                    var friendMarker: Marker = map.addMarker(MarkerOptions()
+                //if data is new, add it to mapView
+                if (!skip) {
+                    var friendMarker: Marker = map.addMarker(
+                        MarkerOptions()
                             .position(location)
                             .title(item.vehicleId.toString())
                             .snippet(addresses.get(0).getAddressLine(0))
-                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.small_vehicle_icon)
-                            ))
+                            .icon(
+                                BitmapDescriptorFactory.fromResource(R.drawable.small_vehicle_icon)
+                            )
+                    )
                     friendMarker.tag = item.vehicleId
 
                     markers.add(friendMarker)
-
                 }
             }
         }
     }
 
+    //todo Need to create route to car
     private fun getRouteData(startLatLng: String, endLatLng: String) {
         API.buildRouteApi().getRoute(startLatLng, MAPS_API_KEY, endLatLng)
             .observeOn(AndroidSchedulers.mainThread())
@@ -155,6 +155,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
             .subscribe({ response -> onResponse(response) }, { t -> onFailure(t) })
     }
 
+    //every 1 min call API
     private val updateAPI = object : Runnable {
         override fun run() {
             getData()
@@ -162,6 +163,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
         }
     }
 
+    //On pause stop API calls and restart them on resume
     override fun onPause() {
         super.onPause()
         mainHandler.removeCallbacks(updateAPI)
@@ -246,14 +248,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
         } catch (e: SecurityException) {
             Log.e("Exception: %s", e.message, e)
         }
-    }
-
-    //todo should change methods and not use deprecated ones.
-    //todo add this to utils class
-    private fun isNetworkConnected(): Boolean {
-        val cm = baseContext?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val activeNetwork: NetworkInfo? = cm.activeNetworkInfo
-        return activeNetwork?.isConnectedOrConnecting == true
     }
 
     companion object {
