@@ -20,8 +20,8 @@
         <androidx.cardview.widget.CardView
             android:layout_width="50dp"
             android:layout_height="50dp"
-            android:layout_marginLeft="20dp"
             android:layout_gravity="center"
+            android:layout_marginLeft="20dp"
             app:cardCornerRadius="25dp">
 
             <ImageView
@@ -44,7 +44,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:maxLines="1"
-                android:text="vehicle name"
+                android:text=""
                 android:textColor="@android:color/black"
                 android:textSize="16dp" />
 
@@ -58,7 +58,7 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:text="Color: "
+                    android:text="@string/color"
                     android:textColor="@android:color/black"
                     android:textSize="16dp" />
 
@@ -74,7 +74,7 @@
                 android:id="@+id/vehicleAddress"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="adressadressadressadressadressadressadressadressadress adressa adressadressadressadressadressadressadressadressadress adressa adressadressadressadressadressadressadressadressadress adressa adressadressadressadressadressadressadressadressadress adressa "
+                android:text=""
                 android:textColor="@android:color/black"
                 android:textSize="16dp" />
         </LinearLayout>
