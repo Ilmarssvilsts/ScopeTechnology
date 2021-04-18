@@ -9,6 +9,8 @@ import android.location.Location
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.widget.Toast
@@ -45,6 +47,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
     var id: Int = 0
     private var vehicles: MutableList<Vehicle> = mutableListOf()
+    lateinit var mainHandler: Handler
 
     private val vehicleViewModel: VehicleViewModel by viewModels {
         VehicleViewModelFactory((application.getApplicationContext() as MapApplication).vehicleRepository)
@@ -61,7 +64,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
         mapFragment.getMapAsync(this)
 
         if (isNetworkConnected()) {
-            getData()
+            mainHandler = Handler(Looper.getMainLooper())
             vehicleViewModel.allVehicles.observe(owner = this) { words ->
                 // Update the cached copy of the words in the adapter.
                 words.let {
@@ -85,7 +88,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
     private fun onFailure(t: Throwable) {
         Toast.makeText(baseContext, getString(R.string.error), Toast.LENGTH_SHORT).show()
         if (isNetworkConnected()) {
-            getData()
+            mainHandler.removeCallbacks(updateAPI)
+            mainHandler.post(updateAPI)
         }
     }
 
@@ -135,6 +139,23 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
             .observeOn(AndroidSchedulers.mainThread())
             .subscribeOn(Schedulers.io())
             .subscribe({ response -> onResponse(response) }, { t -> onFailure(t) })
+    }
+
+    private val updateAPI = object : Runnable {
+        override fun run() {
+            getData()
+            mainHandler.postDelayed(this, 60000)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        mainHandler.removeCallbacks(updateAPI)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mainHandler.post(updateAPI)
     }
 
     private fun getLocationPermission() {
