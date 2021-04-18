@@ -1,4 +1,4 @@
-package com.example.maphw.data
+package com.example.maphw.data.models
 
 import androidx.room.*
 
@@ -7,5 +7,5 @@ data class Owner(
     @PrimaryKey @ColumnInfo(name = "id") var userId: Int,
     var name: String,
     var surname: String,
-    var foto: String
+    var photo: String
 )

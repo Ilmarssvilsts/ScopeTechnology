@@ -1,14 +1,8 @@
-package com.example.maphw.data
+package com.example.maphw.data.models
 
 import androidx.room.*
 
-@Entity(
-    tableName = "vehicles",
-    foreignKeys = [
-        ForeignKey(entity = Owner::class, parentColumns = ["id"], childColumns = ["user_id"])
-    ],
-    indices = [Index("user_id")]
-)
+@Entity(tableName = "vehicles")
 data class Vehicle(
     @ColumnInfo(name = "user_id") val userId: Int,
     @PrimaryKey @ColumnInfo(name = "vehicleid") val vehicleId: Int,
@@ -17,7 +11,5 @@ data class Vehicle(
     val year: String,
     val color: String,
     val vin: String,
-    val foto: String
-){
-
-}
+    val photo: String
+)

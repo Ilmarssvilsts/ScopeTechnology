@@ -1,52 +1,77 @@
 package com.example.maphw.activities
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Address
+import android.location.Geocoder
 import android.location.Location
-import android.net.ConnectivityManager
-import android.net.NetworkInfo
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.observe
+import com.example.maphw.*
 import com.example.maphw.BuildConfig.MAPS_API_KEY
 import com.example.maphw.R
+import com.example.maphw.adapters.InfoWindow
 import com.example.maphw.api.API
 import com.example.maphw.api.models.*
+import com.example.maphw.data.models.Vehicle
+import com.example.maphw.data.viewModels.VehicleViewModel
+import com.example.maphw.data.viewModels.VehicleViewModelFactory
+import com.example.maphw.utils.Utils.isNetworkConnected
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.*
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
+import java.util.*
 
 
 class MapActivity : AppCompatActivity(), OnMapReadyCallback,
     ActivityCompat.OnRequestPermissionsResultCallback {
 
-    var vehicleList: MutableList<VehicleLocation> = mutableListOf()
     private lateinit var map: GoogleMap
+    private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
+    lateinit var mainHandler: Handler
     private var locationPermissionGranted = false
     private var lastKnownLocation: Location? = null
-    private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
+    private var vehicles: MutableList<Vehicle> = mutableListOf()
+    var markers: MutableList<Marker> = ArrayList()
+    var vehicleList: MutableList<VehicleLocation> = mutableListOf()
+    var id: Int = 0
+
+    private val vehicleViewModel: VehicleViewModel by viewModels {
+        VehicleViewModelFactory((applicationContext as MapApplication).vehicleRepository)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_maps)
-
+        id = intent.getIntExtra("id", 0)
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
 
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
-        if (isNetworkConnected()) {
-            getData()
+        if (isNetworkConnected(baseContext)) {
+            mainHandler = Handler(Looper.getMainLooper())
+            vehicleViewModel.allVehicles.observe(owner = this) { item ->
+                item.let {
+                    vehicles = it as MutableList<Vehicle>
+                    map.setInfoWindowAdapter(InfoWindow(this, vehicles))
+                }
+            }
         } else {
             finish()
             Toast.makeText(baseContext, getString(R.string.no_network), Toast.LENGTH_LONG).show()
@@ -55,7 +80,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
 
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
-
         getLocationPermission()
         updateLocationUI()
         getDeviceLocation()
@@ -63,32 +87,54 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
 
     private fun onFailure(t: Throwable) {
         Toast.makeText(baseContext, getString(R.string.error), Toast.LENGTH_SHORT).show()
-        if (isNetworkConnected()) {
-            getData()
+        if (isNetworkConnected(baseContext)) {
+            mainHandler.removeCallbacks(updateAPI)
+            mainHandler.post(updateAPI)
         }
     }
 
     private fun onResponse(response: VehicleLocationList) {
         vehicleList = response.data as MutableList<VehicleLocation>
 
+        var addresses: List<Address>
+        val geocoder = Geocoder(this, Locale.getDefault())
+
         for (item in vehicleList) {
             var lat = item.lat?.toDoubleOrNull()
             var lon = item.lon?.toDoubleOrNull()
             if (lat != null && lon != null) {
-                map.apply {
+                addresses = geocoder.getFromLocation(lat, lon, 1)
+                val location = LatLng(lat, lon)
 
-                    val sydney = LatLng(lat, lon)
-                    addMarker(
+                //This updates annotations with new locations
+                var skip = false
+                for (marker in markers) {
+                    if (marker.tag == item.vehicleId) {
+                        marker.position = location
+                        skip = true
+                    }
+                }
+
+                //if data is new, add it to mapView
+                if (!skip) {
+                    var friendMarker: Marker = map.addMarker(
                         MarkerOptions()
-                            .position(sydney)
+                            .position(location)
                             .title(item.vehicleId.toString())
-                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.small_vehicle_icon))
+                            .snippet(addresses.get(0).getAddressLine(0))
+                            .icon(
+                                BitmapDescriptorFactory.fromResource(R.drawable.small_vehicle_icon)
+                            )
                     )
+                    friendMarker.tag = item.vehicleId
+
+                    markers.add(friendMarker)
                 }
             }
         }
     }
 
+    //todo Need to create route to car
     private fun getRouteData(startLatLng: String, endLatLng: String) {
         API.buildRouteApi().getRoute(startLatLng, MAPS_API_KEY, endLatLng)
             .observeOn(AndroidSchedulers.mainThread())
@@ -103,11 +149,29 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
     }
 
     private fun getData() {
-        val id: String = intent.getStringExtra("id").toString()
-        API.buildApi().getCurrentPosition(id)
+        API.buildApi().getCurrentPosition(id.toString())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribeOn(Schedulers.io())
             .subscribe({ response -> onResponse(response) }, { t -> onFailure(t) })
+    }
+
+    //every 1 min call API
+    private val updateAPI = object : Runnable {
+        override fun run() {
+            getData()
+            mainHandler.postDelayed(this, 60000)
+        }
+    }
+
+    //On pause stop API calls and restart them on resume
+    override fun onPause() {
+        super.onPause()
+        mainHandler.removeCallbacks(updateAPI)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mainHandler.post(updateAPI)
     }
 
     private fun getLocationPermission() {
@@ -136,6 +200,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
                 if (grantResults[item] == PackageManager.PERMISSION_DENIED) {
                     finish()
                 } else {
+                    locationPermissionGranted = true
                     updateLocationUI()
                     getDeviceLocation()
                 }
@@ -184,14 +249,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
         } catch (e: SecurityException) {
             Log.e("Exception: %s", e.message, e)
         }
-    }
-
-    //todo should change methods and not use deprecated ones.
-    //todo add this to utils class
-    private fun isNetworkConnected(): Boolean {
-        val cm = baseContext?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val activeNetwork: NetworkInfo? = cm.activeNetworkInfo
-        return activeNetwork?.isConnectedOrConnecting == true
     }
 
     companion object {

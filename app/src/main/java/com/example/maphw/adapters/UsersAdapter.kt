@@ -8,11 +8,11 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.maphw.R
-import com.example.maphw.api.models.User
+import com.example.maphw.data.models.Owner
 import com.squareup.picasso.Picasso
 
 class UsersAdapter(
-    private var usersList: MutableList<User>,
+    private var usersList: MutableList<Owner>,
     private val rowLayout: Int = 0,
     private var context: Context?,
     private val itemClickListener: OnItemClickListener
@@ -21,7 +21,7 @@ class UsersAdapter(
     lateinit var recyclerView: RecyclerView
 
     fun updateUsers(
-        usersList: MutableList<User>
+        usersList: MutableList<Owner>
     ) {
         this.usersList = usersList
         notifyDataSetChanged()
@@ -57,10 +57,10 @@ class UsersAdapter(
 
     override fun onBindViewHolder(holder: UsersViewHolder, position: Int) {
         holder.bind(position, itemClickListener)
-        holder.userName.text = usersList[position].owner?.name
-        holder.userSurname.text = usersList[position].owner?.surname
+        holder.userName.text = usersList[position].name
+        holder.userSurname.text = usersList[position].surname
         //Picasso sometimes does not like http urls
-        Picasso.get().load(usersList[position].owner?.foto?.replace("http:", "https:"))
+        Picasso.get().load(usersList[position].photo?.replace("http:", "https:"))
             .into(holder.userImg)
     }
 

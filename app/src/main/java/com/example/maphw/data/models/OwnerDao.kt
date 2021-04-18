@@ -1,13 +1,14 @@
-package com.example.maphw.data
+package com.example.maphw.data.models
 
 import androidx.room.*
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface OwnerDao {
     @Query("SELECT * FROM owners")
-    fun getOwners(): List<Owner>
+    fun getOwners(): Flow<List<Owner>>
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOwners(owners: Owner): Long
 
     @Delete
