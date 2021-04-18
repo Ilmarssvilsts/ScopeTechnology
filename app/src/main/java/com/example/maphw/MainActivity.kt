@@ -96,7 +96,7 @@ class MainActivity : AppCompatActivity(), UsersAdapter.OnItemClickListener {
             noData?.visibility = View.VISIBLE
         }
         swipeRefreshLayout?.isRefreshing = false
-        Toast.makeText(applicationContext, t.message, Toast.LENGTH_LONG).show()
+        Toast.makeText(applicationContext, R.string.error, Toast.LENGTH_LONG).show()
     }
 
     private fun onResponse(response: UserList) {

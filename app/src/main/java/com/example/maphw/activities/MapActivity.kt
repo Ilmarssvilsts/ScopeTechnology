@@ -200,6 +200,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback,
                 if (grantResults[item] == PackageManager.PERMISSION_DENIED) {
                     finish()
                 } else {
+                    locationPermissionGranted = true
                     updateLocationUI()
                     getDeviceLocation()
                 }

@@ -11,5 +11,4 @@ Things that I did not implement:
 Things that should be updated or implemented:
 1)In MapView - last update time.
 2)Better error toasts e.g. for network issues I could have added some icon or something that is displayed on the screen(in corner or in the bottom) til user turns on the network.
-3)After opening MapView and giving permission initially your loccation will not be displayed(small issue, but did not have time to fix).
-4)TESTS(Unit and Integration tests)
+3)TESTS(Unit and Integration tests)
